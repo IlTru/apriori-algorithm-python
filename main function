@@ -1,0 +1,102 @@
+import pandas as pd
+from itertools import chain, combinations
+
+def apriori_algorithm(df, support_min, min_conf, number_of_rules):
+    def generate_combinations(items):
+        c = []
+        for i in range(len(items)-1):
+            for j in range(i + 1, len(items)):
+                if set(items[i][:-1]) == set(items[j][:-1]):
+                    itemset = sorted(list(set(items[i] + items[j])))
+                    if itemset not in c:
+                        c.append(itemset)
+
+        l = [itemset for itemset in c if support_count(itemset)/num_transactions >= support_min]
+        return l
+
+    def support_count(itemset):
+        cont = 0
+        for i in range(num_transactions):
+            transaction = df.iloc[i, :].tolist()
+            items_in_transaction = []
+            for i, present in enumerate(transaction):
+                if present == 't':
+                    items_in_transaction.append(item_names[i])
+            itemset_in_transaction = True
+            for item in itemset:
+                if item not in items_in_transaction:
+                    itemset_in_transaction = False
+            if itemset_in_transaction:
+                cont+=1
+
+        # print(itemset, cont/num_transactions)
+        return cont
+
+    def generate_rules(L, min_conf):
+        R = []
+        for l in L:
+            for itemset in l:
+                if len(itemset) == 1:
+                    continue
+                for sub_itemset in generate_sub_itemsets(itemset):
+                    confidence_val = confidence(sub_itemset, [item for item in itemset if item not in sub_itemset])
+                    #print('{} -> {} conf: {}'.format(sub_itemset, [item for item in itemset if item not in sub_itemset], confidence_val))
+                    if confidence_val >= min_conf:
+                        R.append([sub_itemset, [item for item in itemset if item not in sub_itemset]])
+
+        return R
+
+    def generate_sub_itemsets(itemset):
+        result = []
+
+        for size in range(1, len(itemset)):
+            current_combinations = combinations(itemset, size)
+            current_combinations = [list(combination) for combination in current_combinations]
+            result.extend(current_combinations)
+
+        return result
+
+    def confidence(itemset, large_itemset):
+        support_XZ = support_count(list(itemset + large_itemset))
+        support_X = support_count(list(itemset))
+
+        if support_X > 0:
+            return support_XZ / support_X
+        else:
+            return 0
+
+    L = []
+    num_transactions = len(df)
+    item_names = df.columns.tolist()
+
+    step = 1
+    L.append([])
+    for itemset in [[item] for item in item_names]:
+        if support_count(itemset)/num_transactions >= support_min:
+            L[0].append(itemset)
+    print('itemsets of length {} that pass the minimum support test: {}'.format(step, len(L[-1])))
+
+    while True:
+        if len(L[-1]) == 1 or len(L[-1]) == 0:
+            break
+        L.append(generate_combinations(L[len(L) - 1]))
+        step+=1
+        print('itemsets of length {} that pass the minimum support test: {}'.format(step, len(L[-1])))
+
+    # for l in L:
+    #     print(l)
+
+    print('Generating rules...')
+
+    rules = generate_rules(L, min_conf)
+    for rule in reversed(rules[-number_of_rules:]):
+        # print('{} -> {}'.format(rule[0], rule[1]))
+        print('{} -> {} support={}; total support={}; confidence={}'.format(rule[0], rule[1], round(support_count(rule[0]+rule[1])/num_transactions, 2), support_count(rule[0]+rule[1]), round(confidence(rule[0], rule[1]), 2)))
+
+
+data = pd.read_csv('data_test_items.csv')
+support_min = 0.25
+min_conf = 0.50
+number_of_rules = 10
+
+apriori_algorithm(data, support_min, min_conf, number_of_rules)
