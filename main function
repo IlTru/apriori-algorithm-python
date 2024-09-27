@@ -94,7 +94,7 @@ def apriori_algorithm(df, support_min, min_conf, number_of_rules):
         print('{} -> {} support={}; total support={}; confidence={}'.format(rule[0], rule[1], round(support_count(rule[0]+rule[1])/num_transactions, 2), support_count(rule[0]+rule[1]), round(confidence(rule[0], rule[1]), 2)))
 
 
-data = pd.read_csv('data_test_items.csv')
+data = pd.read_csv('supermarket data.csv')
 support_min = 0.25
 min_conf = 0.50
 number_of_rules = 10
